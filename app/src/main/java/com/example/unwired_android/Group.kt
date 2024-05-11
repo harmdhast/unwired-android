@@ -1,5 +1,6 @@
 package com.example.unwired_android
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -42,6 +43,9 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.unwired_android.api.Message
+import com.example.unwired_android.api.User
+import com.example.unwired_android.api.UserStore
 import kotlinx.coroutines.launch
 
 class GroupActivity : ComponentActivity() {
@@ -182,15 +186,18 @@ fun textColorForBackground(color: Color): Color {
     }
 }
 
-class GroupViewModel() : ViewModel() {
+class GroupViewModel(context: Context) : ViewModel() {
+    private val userStore = UserStore(context)
+
+    //private val token = runBlocking { userStore.getAccessToken.first() }
     private val _currentUser = MutableLiveData<User>()
     val currentUser: LiveData<User> = _currentUser
 
     fun getCurrentUser() {
         viewModelScope.launch {
             try {
-                val success = ApiClient.apiService.getCurrentUser()
-                _currentUser.postValue(success.body())
+                //val success = ApiClient.apiService.getCurrentUser(token)
+                //_currentUser.postValue(success.body())
             } catch (e: Exception) {
                 // Handle error
                 //_loginResult.postValue()
@@ -204,8 +211,8 @@ class GroupViewModel() : ViewModel() {
     fun getMessages(groupId: Int) {
         viewModelScope.launch {
             try {
-                val success = ApiClient.apiService.getMessages(groupId)
-                _messages.postValue(success.body())
+                //val success = ApiClient.apiService.getMessages(token, groupId)
+                //_messages.postValue(success.body())
             } catch (e: Exception) {
                 // Handle error
                 //_loginResult.postValue()
@@ -222,16 +229,16 @@ class GroupViewModel() : ViewModel() {
     fun getMembers(groupId: Int) {
         viewModelScope.launch {
             try {
-                val success = ApiClient.apiService.getMembers(groupId)
-                _members.postValue(success.body())
-                val myHashMap: HashMap<Int, ImageBitmap> = HashMap()
-                success.body()?.forEach { user ->
-                    val bitmap = base64ToBitmap(user.avatar)
-                    if (bitmap != null) {
-                        myHashMap[user.id] = bitmap
-                    }
-                }
-                _avatars.postValue(myHashMap)
+                //val success = ApiClient.apiService.getMembers(groupId, token)
+//                _members.postValue(success.body())
+//                val myHashMap: HashMap<Int, ImageBitmap> = HashMap()
+//                success.body()?.forEach { user ->
+//                    val bitmap = base64ToBitmap(user.avatar)
+//                    if (bitmap != null) {
+//                        myHashMap[user.id] = bitmap
+//                    }
+//                }
+                //_avatars.postValue(myHashMap)
             } catch (e: Exception) {
                 // Handle error
             }

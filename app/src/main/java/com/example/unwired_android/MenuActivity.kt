@@ -1,6 +1,7 @@
 package com.example.unwired_android
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.util.Base64
@@ -48,6 +49,9 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.unwired_android.api.Group
+import com.example.unwired_android.api.User
+import com.example.unwired_android.api.UserStore
 import kotlinx.coroutines.launch
 
 @Composable
@@ -225,7 +229,10 @@ fun GroupListItem(group: Group) {
     }
 }
 
-class MainMenuViewModel() : ViewModel() {
+class MainMenuViewModel(context: Context) : ViewModel() {
+    private val userStore = UserStore(context)
+    // private val token = runBlocking { userStore.getAccessToken.first() }
+
     private val _currentUser = MutableLiveData<User>()
     val currentUser: LiveData<User> = _currentUser
 
@@ -236,8 +243,8 @@ class MainMenuViewModel() : ViewModel() {
     fun getCurrentUser() {
         viewModelScope.launch {
             try {
-                val success = ApiClient.apiService.getCurrentUser()
-                _currentUser.postValue(success.body())
+//                val success = ApiClient.apiService.getCurrentUser(token)
+//                _currentUser.postValue(success.body())
             } catch (e: Exception) {
                 // Handle error
                 //_loginResult.postValue()
@@ -248,8 +255,8 @@ class MainMenuViewModel() : ViewModel() {
     fun getGroups() {
         viewModelScope.launch {
             try {
-                val success = ApiClient.apiService.getGroups()
-                _groups.postValue(success.body())
+//                val success = ApiClient.apiService.getGroups(token)
+//                _groups.postValue(success.body())
             } catch (e: Exception) {
                 // Handle error
                 //_loginResult.postValue()
