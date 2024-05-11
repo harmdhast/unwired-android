@@ -16,15 +16,24 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.unwired_android.api.UserStore
 import com.example.unwired_android.ui.LoginActivity
 import com.example.unwired_android.ui.utils.LoaderCircular
 import com.example.unwired_android.viewmodels.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val mainViewModel: MainViewModel by viewModels()
+    private val testViewModel: TestViewModel by viewModels()
 
     private val loginActivity =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -32,6 +41,9 @@ class MainActivity : ComponentActivity() {
                 // Do something here
                 Toast.makeText(this, "Logged In", Toast.LENGTH_SHORT).show()
                 mainViewModel.tokenValid()
+            } else {
+                mainViewModel.tokenValid()
+                println("BACK")
             }
         }
 
@@ -57,6 +69,8 @@ class MainActivity : ComponentActivity() {
         val tokenValid by mainViewModel.isTokenValid.observeAsState()
 
         SideEffect {
+            //Thread.sleep(1000)
+            testViewModel.removeToken()
             mainViewModel.tokenValid()
         }
 
@@ -77,5 +91,24 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+    }
+}
+
+@HiltViewModel
+class TestViewModel @Inject constructor(
+    private val userStore: UserStore
+) : ViewModel() {
+    private val _isTokenValid = MutableLiveData<Boolean>()
+    val isTokenValid: LiveData<Boolean> = _isTokenValid
+
+    fun removeToken() {
+        viewModelScope.launch {
+            try {
+                userStore.deleteToken()
+            } catch (e: Exception) {
+                // Handle error
+                _isTokenValid.postValue(false)
+            }
+        }
     }
 }
