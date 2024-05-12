@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.example.unwired_android.ui.theme.UnwiredandroidTheme
 import com.example.unwired_android.viewmodels.LoginViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -41,45 +42,18 @@ class LoginActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Use the new onBackInvokedDispatcher for API level 33+
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            onBackInvokedDispatcher.registerOnBackInvokedCallback(
-                OnBackInvokedDispatcher.PRIORITY_DEFAULT
-            ) {
-                // Your custom back pressed logic
-                moveTaskToBack(true)
-            }
-        } else {
-            // For devices below API level 33, use the legacy onBackPressedDispatcher
-            onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-                override fun handleOnBackPressed() {
-                    // Your custom back pressed logic
-                    moveTaskToBack(true)
-                }
-            })
-        }
-
         setContent {
-            Surface(
-                modifier = Modifier.fillMaxSize(),
-                color = MaterialTheme.colorScheme.background
-            ) {
-                LoginScreen(viewModel = loginViewModel, onLoginResult = { success ->
-                    setResult(RESULT_OK)
-                    finish()
-                }, context = this)
-            }
-        }
-    }
-
-
-    companion object {
-        const val TITLE = "title"
-        const val ID = "id"
-
-        fun getIntent(context: Context): Intent {
-            return Intent(context, LoginActivity::class.java).apply {
-                putExtra("result", true)
+            UnwiredandroidTheme {
+                // A surface container using the 'background' color from the theme
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    LoginScreen(viewModel = loginViewModel, onLoginResult = { success ->
+                        setResult(RESULT_OK)
+                        finish()
+                    }, context = this)
+                }
             }
         }
     }

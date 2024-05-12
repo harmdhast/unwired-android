@@ -144,7 +144,7 @@ fun base64ToBitmap(b64: String): ImageBitmap? {
         BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size).asImageBitmap()
     } catch (_: Exception) {
         println("Couldn't convert avatar")
-        null;
+        null
     }
 }
 
@@ -161,7 +161,7 @@ fun Base64Avatar(b64: String?, size: Int = 200): Unit {
                 .clip(CircleShape)
         )
     }
-    val decodedImage = base64ToBitmap(b64);
+    val decodedImage = base64ToBitmap(b64)
     return if (decodedImage != null) {
         Image(
             bitmap = decodedImage,

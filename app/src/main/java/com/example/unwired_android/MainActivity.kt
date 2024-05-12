@@ -1,8 +1,6 @@
 package com.example.unwired_android
 
-import android.app.Activity
 import android.app.AlertDialog
-import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -12,28 +10,39 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
 import com.example.unwired_android.api.UserStore
-import com.example.unwired_android.ui.LoginActivity
 import com.example.unwired_android.ui.theme.UnwiredandroidTheme
 import com.example.unwired_android.ui.utils.LoaderCircular
 import com.example.unwired_android.viewmodels.MainViewModel
@@ -50,7 +59,7 @@ class MainActivity : ComponentActivity() {
 
     private val loginActivity =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode == Activity.RESULT_OK) {
+            if (result.resultCode == RESULT_OK) {
                 Toast.makeText(this, "Logged In", Toast.LENGTH_SHORT).show()
                 mainViewModel.tokenValid()
             } else {
@@ -80,6 +89,13 @@ class MainActivity : ComponentActivity() {
     fun MainContent() {
 
         val isServerUp by mainViewModel.canReachServer.observeAsState()
+
+        // State of bottomBar, set state to false, if current page route is "car_details"
+        val bottomBarState = rememberSaveable { (mutableStateOf(true)) }
+
+// State of topBar, set state to false, if current page route is "car_details"
+        val topBarState = rememberSaveable { (mutableStateOf(true)) }
+
 
         // Error dialog
         val builder: AlertDialog.Builder = AlertDialog.Builder(this)
@@ -130,6 +146,8 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     fun LoginPage() {
+        val navController = rememberNavController()
+        val navBackStackEntry by navController.currentBackStackEntryAsState()
         val tokenValid by mainViewModel.isTokenValid.observeAsState()
 
         LaunchedEffect(Unit) {
@@ -142,29 +160,22 @@ class MainActivity : ComponentActivity() {
                 Text("Token Valid")
             }
 
-            // Loading indicator
             false -> {
-                Button(
-                    onClick = {
-                        startActivity(Intent(this, LoginActivity::class.java))
-                    },
-                    modifier = Modifier.padding(8.dp)
+                NavHost(
+                    navController = navController,
+                    startDestination = "main",
                 ) {
-                    Text(
-                        text = "Login",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-
-                }
-                Button(onClick = {
-
-                }) {
-                    Text(
-                        text = "Register",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
+                    composable("main") {
+                        MainRoute(
+                            { navController.navigate("login") },
+                            { navController.navigate("register") })
+                    }
+                    composable("login") {
+                        LoginRoute()
+                    }
+                    composable("register") {
+                        RegisterRoute()
+                    }
                 }
             }
 
@@ -175,6 +186,135 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@Composable
+fun LoginRoute() {
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxHeight()
+            .fillMaxWidth(.8f)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        TextField(
+            value = username,
+            onValueChange = { username = it },
+            label = { Text("Username") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        TextField(
+            value = password,
+            onValueChange = { password = it },
+            label = { Text("Password") },
+            modifier = Modifier.fillMaxWidth(),
+            visualTransformation = PasswordVisualTransformation()
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(
+            onClick = {
+                // Call ViewModel's login method
+                // viewModel.login(username, password, context)
+            },
+            //modifier = Modifier.fillMaxWidth(),
+            //enabled = loginResult != true
+        ) {
+//            if (loginResult == true) {
+//                CircularProgressIndicator()
+//            } else {
+            Text("Login")
+//            }
+        }
+    }
+}
+
+@Composable
+fun RegisterRoute() {
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxHeight()
+            .fillMaxWidth(.8f)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        TextField(
+            value = username,
+            onValueChange = { username = it },
+            label = { Text("Username") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        TextField(
+            value = password,
+            onValueChange = { password = it },
+            label = { Text("Password") },
+            modifier = Modifier.fillMaxWidth(),
+            visualTransformation = PasswordVisualTransformation()
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        TextField(
+            value = confirmPassword,
+            onValueChange = { confirmPassword = it },
+            label = { Text("Confirm password") },
+            modifier = Modifier.fillMaxWidth(),
+            visualTransformation = PasswordVisualTransformation()
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(
+            onClick = {
+                // Call ViewModel's login method
+                // viewModel.login(username, password, context)
+            },
+            //modifier = Modifier.fillMaxWidth(),
+            //enabled = loginResult != true
+        ) {
+//            if (loginResult == true) {
+//                CircularProgressIndicator()
+//            } else {
+            Text("Register")
+//            }
+        }
+    }
+}
+
+@Composable
+fun MainRoute(
+    onClickLogin: () -> Unit,
+    onClickRegister: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Button(
+            onClick = onClickLogin,
+            modifier = Modifier.padding(8.dp)
+        ) {
+            Text(
+                text = "Login",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onPrimary
+            )
+
+        }
+        Button(onClick = onClickRegister) {
+            Text(
+                text = "Register",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onPrimary
+            )
+        }
+    }
+}
 
 @HiltViewModel
 class TestViewModel @Inject constructor(
