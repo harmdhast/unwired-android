@@ -2,6 +2,7 @@ package com.example.unwired_android
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -14,24 +15,26 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.unwired_android.api.UserStore
 import com.example.unwired_android.ui.LoginActivity
+import com.example.unwired_android.ui.theme.UnwiredandroidTheme
 import com.example.unwired_android.ui.utils.LoaderCircular
 import com.example.unwired_android.viewmodels.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -48,7 +51,6 @@ class MainActivity : ComponentActivity() {
     private val loginActivity =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == Activity.RESULT_OK) {
-                // Do something here
                 Toast.makeText(this, "Logged In", Toast.LENGTH_SHORT).show()
                 mainViewModel.tokenValid()
             } else {
@@ -62,42 +64,37 @@ class MainActivity : ComponentActivity() {
 
 
         setContent {
-            //UnwiredandroidTheme {
-            // A surface container using the 'background' color from the theme
-            Surface(
-                modifier = Modifier.fillMaxSize(),
-                color = MaterialTheme.colorScheme.background
-            ) {
-                MainContent()
+            UnwiredandroidTheme {
+                // A surface container using the 'background' color from the theme
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    MainContent()
+                }
             }
-            //}
         }
     }
 
     @Composable
     fun MainContent() {
-        val tokenValid by mainViewModel.isTokenValid.observeAsState()
+
         val isServerUp by mainViewModel.canReachServer.observeAsState()
 
+        // Error dialog
         val builder: AlertDialog.Builder = AlertDialog.Builder(this)
         builder
             .setTitle("Error")
             .setMessage("Couldn't reach the server. Check your internet connection and try again")
             .setNeutralButton("OK") { _, _ ->
-                finish()
+                finish() // Exist app on click
             }
 
         val dialog: AlertDialog = builder.create()
 
 
         LaunchedEffect(Unit) {
-            mainViewModel.pingServer("10.0.2.2", 8000)
-        }
-
-        SideEffect {
-            //Thread.sleep(1000)
-            testViewModel.removeToken()
-            mainViewModel.tokenValid()
+            mainViewModel.pingServer(API_IP, API_PORT)
         }
 
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -115,12 +112,7 @@ class MainActivity : ComponentActivity() {
             ) {
                 when (isServerUp) {
                     true -> {
-                        Button(onClick = { /*TODO*/ }) {
-                            Text("Login")
-                        }
-                        Button(onClick = { /*TODO*/ }) {
-                            Text("Register")
-                        }
+                        LoginPage()
                     }
 
                     false -> {
@@ -134,29 +126,55 @@ class MainActivity : ComponentActivity() {
             }
 
         }
+    }
 
+    @Composable
+    fun LoginPage() {
+        val tokenValid by mainViewModel.isTokenValid.observeAsState()
 
+        LaunchedEffect(Unit) {
+            testViewModel.removeToken()
+            mainViewModel.tokenValid()
+        }
 
-        return
         when (tokenValid) {
             true -> {
                 Text("Token Valid")
             }
 
+            // Loading indicator
             false -> {
-                loginActivity.launch(
-                    LoginActivity.getIntent(this)
-                )
+                Button(
+                    onClick = {
+                        startActivity(Intent(this, LoginActivity::class.java))
+                    },
+                    modifier = Modifier.padding(8.dp)
+                ) {
+                    Text(
+                        text = "Login",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+
+                }
+                Button(onClick = {
+
+                }) {
+                    Text(
+                        text = "Register",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
             }
 
-            // Loading indicator
             else -> {
                 LoaderCircular()
             }
         }
-
     }
 }
+
 
 @HiltViewModel
 class TestViewModel @Inject constructor(

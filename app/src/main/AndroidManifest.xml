@@ -40,8 +40,8 @@
         <activity
             android:name=".ui.LoginActivity"
             android:exported="true"
-            android:theme="@style/Theme.Unwiredandroid"
-            >
+            android:noHistory="true"
+            android:theme="@style/Theme.Unwiredandroid">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
