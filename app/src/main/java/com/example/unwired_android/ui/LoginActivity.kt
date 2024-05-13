@@ -1,12 +1,8 @@
 package com.example.unwired_android.ui
 
 import android.content.Context
-import android.content.Intent
-import android.os.Build
 import android.os.Bundle
-import android.window.OnBackInvokedDispatcher
 import androidx.activity.ComponentActivity
-import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Arrangement
@@ -95,7 +91,7 @@ fun LoginScreen(
         Button(
             onClick = {
                 // Call ViewModel's login method
-                viewModel.login(username, password, context)
+                viewModel.login(username, password)
             },
             modifier = Modifier.fillMaxWidth(),
             //enabled = loginResult != true

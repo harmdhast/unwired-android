@@ -72,4 +72,11 @@ interface UnwiredAPI {
     suspend fun getMembers(
         @Path("id") groupId: Int,
     ): Response<List<User>>
+
+    @FormUrlEncoded
+    @POST("register")
+    suspend fun register(
+        @Field("username") username: String,
+        @Field("password") password: String
+    ): Response<LoginResponse>
 }

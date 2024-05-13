@@ -1,6 +1,5 @@
 package com.example.unwired_android
 
-import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -46,8 +45,12 @@ import androidx.lifecycle.viewModelScope
 import com.example.unwired_android.api.Message
 import com.example.unwired_android.api.User
 import com.example.unwired_android.api.UserStore
+import dagger.hilt.android.AndroidEntryPoint
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class GroupActivity : ComponentActivity() {
     private val groupViewModel: GroupViewModel by viewModels()
 
@@ -186,9 +189,10 @@ fun textColorForBackground(color: Color): Color {
     }
 }
 
-class GroupViewModel(context: Context) : ViewModel() {
-    private val userStore = UserStore(context)
-
+@HiltViewModel
+class GroupViewModel @Inject constructor(
+    private val userStore: UserStore
+) : ViewModel() {
     //private val token = runBlocking { userStore.getAccessToken.first() }
     private val _currentUser = MutableLiveData<User>()
     val currentUser: LiveData<User> = _currentUser
