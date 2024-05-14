@@ -1,21 +1,14 @@
 package com.example.unwired_android
 
-import android.app.Activity
 import android.content.Context
-import android.content.Intent
 import android.graphics.BitmapFactory
 import android.util.Base64
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Message
@@ -32,19 +25,13 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -114,7 +101,7 @@ fun MainMenu(viewModel: MainMenuViewModel, context: ComponentActivity) {
         ) {
             when (selected) {
                 0 -> {
-                    groups?.let { GroupList(it) }
+                    //groups?.let { GroupList(it) }
                 }
 
                 1 -> {
@@ -183,51 +170,9 @@ fun Base64Avatar(b64: String?, size: Int = 200): Unit {
     }
 }
 
-@Composable
-fun UserView(user: User) {
-    Column(
-        modifier = Modifier
-            .clickable { /* Handle click on group */ }
-            .fillMaxWidth()
-            .fillMaxHeight()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
 
-    ) {
-        Base64Avatar(user.avatar)
-        Text(
-            text = user.username,
-            style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 32.sp)
-        )
-    }
-}
 
-@Composable
-fun GroupList(groups: List<Group>) {
-    LazyColumn {
-        items(groups) { group ->
-            GroupListItem(group = group)
-        }
-    }
-}
 
-@Composable
-fun GroupListItem(group: Group) {
-    println(group.id)
-    val activity = LocalContext.current as Activity
-    Column(
-        modifier = Modifier
-            .padding(16.dp)
-            .clickable {
-                val intent = Intent(activity, GroupActivity::class.java)
-                intent.putExtra("groupId", group.id)
-                activity.startActivity(intent)
-            }
-    ) {
-        Text(text = group.name, style = TextStyle(fontWeight = FontWeight.Bold))
-        Text(text = group.lastMessage.content, style = TextStyle(color = Color.Gray))
-    }
-}
 
 class MainMenuViewModel(context: Context) : ViewModel() {
     private val userStore = UserStore(context)

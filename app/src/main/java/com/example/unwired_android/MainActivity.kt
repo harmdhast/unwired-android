@@ -162,13 +162,12 @@ class MainActivity : ComponentActivity() {
         val tokenValid by mainViewModel.isTokenValid.observeAsState()
 
         LaunchedEffect(Unit) {
-            testViewModel.removeToken()
             mainViewModel.tokenValid()
         }
 
         when (tokenValid) {
             true -> {
-                Text("Token Valid")
+                startActivity(Intent(this@MainActivity, GroupActivity::class.java))
             }
 
             false -> {
