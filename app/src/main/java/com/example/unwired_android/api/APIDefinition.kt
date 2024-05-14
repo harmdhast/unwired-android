@@ -2,6 +2,7 @@ package com.example.unwired_android.api
 
 import com.google.gson.annotations.SerializedName
 import retrofit2.Response
+import retrofit2.http.Body
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
 import retrofit2.http.GET
@@ -45,7 +46,18 @@ data class Group(
     val private: Boolean,
 
     @SerializedName("last_message")
-    val lastMessage: Message
+    val lastMessage: Message?
+)
+
+data class GroupCreateBody(
+    val name: String,
+    val private: Boolean,
+    val members: List<Int>
+)
+
+data class SendMessageBody(
+    @SerializedName("message_content")
+    val messageContent: String
 )
 
 interface UnwiredAPI {
@@ -68,6 +80,12 @@ interface UnwiredAPI {
         @Query("limit") limit: Int = 100
     ): Response<List<Message>>
 
+    @POST("groups/{id}/messages")
+    suspend fun sendMessage(
+        @Path("id") groupId: Int,
+        @Body sendMessageBody: SendMessageBody,
+    ): Response<Message>
+
     @GET("groups/{id}/members")
     suspend fun getMembers(
         @Path("id") groupId: Int,
@@ -79,4 +97,9 @@ interface UnwiredAPI {
         @Field("username") username: String,
         @Field("password") password: String
     ): Response<LoginResponse>
+
+    @POST("groups")
+    suspend fun groupAdd(
+        @Body groupCreateBody: GroupCreateBody
+    ): Response<Group>
 }

@@ -13,6 +13,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,21 +22,29 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -45,6 +54,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -52,18 +62,27 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.unwired_android.api.Group
+import com.example.unwired_android.api.GroupCreateBody
 import com.example.unwired_android.api.Message
+import com.example.unwired_android.api.SendMessageBody
 import com.example.unwired_android.api.UnwiredAPI
 import com.example.unwired_android.api.User
 import com.example.unwired_android.ui.theme.UnwiredandroidTheme
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -99,12 +118,15 @@ fun Group(id: Int, viewModel: GroupViewModel) {
 
     Scaffold(
         topBar = {
-            TopAppBar(title = {
-                Image(
-                    painter = painterResource(R.drawable.unwired_white),
-                    "Logo"
-                )
-            })
+            TopAppBar(
+                title = {
+                    Image(
+                        painter = painterResource(R.drawable.unwired_white),
+                        "Logo"
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            )
         },
         bottomBar = {
             NavigationBar {
@@ -149,14 +171,14 @@ fun Group(id: Int, viewModel: GroupViewModel) {
             NavHost(
                 navController = navController,
                 startDestination = "groups",
-                enterTransition = { fadeIn(animationSpec = tween(700)) },
-                exitTransition = { fadeOut(animationSpec = tween(700)) }
+                enterTransition = { fadeIn(animationSpec = tween(200)) },
+                exitTransition = { fadeOut(animationSpec = tween(200)) }
             ) {
                 composable("groups") {
                     GroupList()
                 }
                 composable("add") {
-                    Text("Test 2")
+                    AddGroup(navController)
                 }
                 composable("user") {
                     currentUser?.let { it1 -> UserView(it1) }
@@ -193,28 +215,83 @@ fun GroupList() {
     }
 
     groups?.let {
-        LazyColumn {
-            items(it) { group ->
+        LazyColumn(modifier = Modifier.fillMaxHeight()) {
+            items(it, key = { it.id }) { group ->
                 GroupListItem(group = group)
             }
         }
     }
 }
 
+fun timeAgoSince(instant: Instant, timeZone: TimeZone = TimeZone.currentSystemDefault()): String {
+    val now = Clock.System.now()
+    val duration = now - instant
+
+    val seconds = duration.inWholeSeconds
+    val minutes = duration.inWholeMinutes
+    val hours = duration.inWholeHours
+    val days = duration.inWholeDays
+
+    return when {
+        seconds < 60 -> "$seconds seconds ago"
+        minutes < 60 -> "$minutes minutes ago"
+        hours < 24 -> "$hours hours ago"
+        else -> "$days days ago"
+    }
+}
+
 @Composable
 fun GroupListItem(group: Group) {
     val activity = LocalContext.current as Activity
-    Column(
+    Row(
         modifier = Modifier
-            .padding(16.dp)
+            .fillMaxWidth()
             .clickable {
                 val intent = Intent(activity, GroupMessagesActivity::class.java)
                 intent.putExtra("groupId", group.id)
                 activity.startActivity(intent)
-            }
+            },
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(text = group.name, style = TextStyle(fontWeight = FontWeight.Bold))
-        Text(text = group.lastMessage.content, style = TextStyle(color = Color.Gray))
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .weight(1f)
+        ) {
+            Text(
+                text = group.name,
+                style = TextStyle(fontWeight = FontWeight.Bold),
+                overflow = TextOverflow.Ellipsis
+            )
+            if (group.lastMessage == null) {
+                Text(text = "No message", style = TextStyle(color = Color.Gray))
+            } else {
+                Text(
+                    text = "${group.lastMessage.author.username}: ${group.lastMessage.content}",
+                    style = TextStyle(color = Color.Gray),
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .padding(end = 8.dp),
+                    maxLines = 1
+                )
+            }
+        }
+        if (group.lastMessage != null) {
+            Text(
+                text = timeAgoSince(
+                    LocalDateTime.parse(group.lastMessage.at)
+                        .toInstant(TimeZone.UTC)
+                ),
+                style = TextStyle(color = Color.Gray),
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .weight(.5f)
+                    .padding(16.dp)
+            )
+
+        }
+
+
     }
 }
 
@@ -235,6 +312,79 @@ fun UserView(user: User) {
             text = user.username,
             style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 32.sp)
         )
+    }
+}
+
+@Composable
+fun AddGroup(navHostController: NavHostController) {
+    var groupName by remember { mutableStateOf("") }
+    var isGroupNameError by remember { mutableStateOf(false) }
+    var groupNameError by remember { mutableStateOf("") }
+    val groupViewModel: GroupViewModel = hiltViewModel()
+    var private by remember {
+        mutableStateOf(false)
+    }
+    val activity = LocalContext.current as Activity
+
+    fun doCreateGroup(name: String) {
+        if (groupName.length < 5) {
+            isGroupNameError = true
+            groupNameError = "Group name length must be at least 6"
+            return
+        }
+
+        val group = runBlocking { groupViewModel.groupAdd(name, true) }
+
+        if (group == null) {
+            isGroupNameError = true
+            groupNameError = "Unknown error while creating group"
+            return
+        }
+
+        println(group)
+        isGroupNameError = false
+        groupNameError = ""
+
+        navHostController.navigate("groups")
+        val intent = Intent(activity, GroupMessagesActivity::class.java)
+        intent.putExtra("groupId", group.id)
+        activity.startActivity(intent)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("Create group", style = MaterialTheme.typography.titleLarge)
+        Spacer(modifier = Modifier.height(16.dp))
+        TextField(
+            value = groupName,
+            onValueChange = { groupName = it },
+            label = { Text("Group Name") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            keyboardActions = KeyboardActions {
+                doCreateGroup(groupName)
+            },
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Checkbox(checked = private, onCheckedChange = { private = it })
+            Text("Private")
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(groupNameError, color = Color.Red)
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = { doCreateGroup(groupName) }) {
+            Text("Create")
+        }
     }
 }
 
@@ -312,6 +462,29 @@ class GroupViewModel @Inject constructor(
             } catch (e: Exception) {
                 // Handle error
             }
+        }
+    }
+
+    private val _newGroup = MutableLiveData<Group>()
+    val newGroup: LiveData<Group> = _newGroup
+
+    suspend fun groupAdd(name: String, private: Boolean): Group? {
+        val response =
+            unwiredAPI.groupAdd(GroupCreateBody(name, private, listOf(1)))
+        return if (response.isSuccessful) {
+            response.body()
+        } else {
+            null
+        }
+    }
+
+    suspend fun sendMessage(groupId: Int, content: String): Message? {
+        val response =
+            unwiredAPI.sendMessage(groupId, SendMessageBody(content))
+        return if (response.isSuccessful) {
+            response.body()
+        } else {
+            null
         }
     }
 }

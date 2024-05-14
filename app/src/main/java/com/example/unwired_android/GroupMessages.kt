@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -32,6 +33,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -50,11 +52,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.unwired_android.api.Message
 import com.example.unwired_android.ui.theme.UnwiredandroidTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.runBlocking
 
 @AndroidEntryPoint
 class GroupMessagesActivity : ComponentActivity() {
-    //private val groupViewModel: GroupViewModel by viewModels()
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val groupId = intent.getIntExtra("groupId", 0)
@@ -79,6 +80,7 @@ fun GroupMessages(groupId: Int) {
         groupViewModel.currentUser
     }.observeAsState()
     var newMsg by remember { mutableStateOf("") }
+    var newMsgError by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         groupViewModel.getCurrentUser()
@@ -87,6 +89,24 @@ fun GroupMessages(groupId: Int) {
         groupViewModel.getMembers(groupId)
     }
 
+
+    fun sendMessage() {
+        if (newMsg.isBlank()) {
+            newMsgError = true;
+            return
+        }
+
+        newMsgError = false;
+        val message = runBlocking { groupViewModel.sendMessage(groupId, newMsg) }
+
+        if (message == null) {
+            newMsgError = true;
+            return
+        }
+
+        groupViewModel.getMessages(groupId)
+
+    }
 
     @Composable
     fun AvatarOrDefault(userId: Int, size: Int = 24, modifier: Modifier = Modifier) {
@@ -122,74 +142,87 @@ fun GroupMessages(groupId: Int) {
                 IconButton(onClick = { activity.finish() }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, "")
                 }
-            }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
         )
 
-        messages?.let {
-            LazyColumn(state = listState) {
-                var prevMessage: Message? = null
-                items(it, key = { it.id }) { message ->
-                    println("Render")
-                    val isAuthor = message.author.id == currentUser?.id
+        Column {
+            messages?.let {
+                LazyColumn(
+                    state = listState, modifier = Modifier
+                        .weight(1f), reverseLayout = true
+                ) {
+                    var prevMessage: Message? = null
+                    items(it, key = { it.id }) { message ->
+                        println("Render")
+                        val isAuthor = message.author.id == currentUser?.id
 
-                    val sameAuthor = prevMessage?.author?.id == message.author.id
-                    val color =
-                        if (isAuthor) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                        val sameAuthor = prevMessage?.author?.id == message.author.id
+                        val color =
+                            if (isAuthor) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
 
-                    if (!sameAuthor) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-                    Row(modifier = Modifier.fillMaxWidth()) {
+                        if (!sameAuthor) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+                        Row(modifier = Modifier.fillMaxWidth()) {
 
-                        Column(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .padding(start = 4.dp, end = 4.dp)
-                        ) {
-                            if (!sameAuthor) {
-                                AvatarOrDefault(
-                                    message.author.id,
-                                    size = 48
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .padding(start = 4.dp, end = 4.dp)
+                            ) {
+                                if (!sameAuthor) {
+                                    AvatarOrDefault(
+                                        message.author.id,
+                                        size = 48
+                                    )
+                                } else {
+
+                                    Spacer(modifier = Modifier.width(48.dp))
+                                }
+
+                            }
+
+                            Column(
+                                verticalArrangement = Arrangement.Center,
+                                modifier = Modifier
+                                    .background(
+                                        color
+                                    )
+                                    .padding(8.dp)
+                                    .heightIn(min = 32.dp)
+                                    .widthIn(max = LocalConfiguration.current.screenWidthDp.dp * .75f)
+
+                            ) {
+                                Text(
+                                    text = message.content,
+                                    color = textColorForBackground(color)
                                 )
-                            } else {
-
-                                Spacer(modifier = Modifier.width(48.dp))
                             }
 
                         }
 
-                        Column(
-                            verticalArrangement = Arrangement.Center,
-                            modifier = Modifier
-                                .background(
-                                    color
-                                )
-                                .padding(8.dp)
-                                .heightIn(min = 32.dp)
-                                .widthIn(max = LocalConfiguration.current.screenWidthDp.dp * .75f)
-
-                        ) {
-                            Text(
-                                text = message.content + Text(text = isAuthor.toString()) + Text(
-                                    message.author.id.toString()
-                                ),
-                                color = textColorForBackground(color)
-                            )
-                        }
-
+                        prevMessage = message
                     }
+                }
+            }
 
-                    prevMessage = message
+            Row(
+                Modifier.padding(8.dp)
+            ) {
+                TextField(
+                    value = newMsg,
+                    onValueChange = { newMsg = it },
+                    modifier = Modifier.weight(1f),
+                    isError = newMsgError,
+                    keyboardActions = KeyboardActions {
+                        sendMessage()
+                    }
+                )
+                IconButton(onClick = { sendMessage() }) {
+                    Icon(Icons.AutoMirrored.Filled.Send, "")
                 }
             }
         }
-
-        Row {
-            TextField(value = newMsg, onValueChange = { newMsg = it })
-            IconButton(onClick = { /*TODO*/ }) {
-                Icon(Icons.AutoMirrored.Filled.Send, "")
-            }
-        }
-
     }
 }
