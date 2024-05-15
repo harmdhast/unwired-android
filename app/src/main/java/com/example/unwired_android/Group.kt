@@ -481,10 +481,16 @@ class GroupViewModel @Inject constructor(
     suspend fun sendMessage(groupId: Int, content: String): Message? {
         val response =
             unwiredAPI.sendMessage(groupId, SendMessageBody(content))
-        return if (response.isSuccessful) {
-            response.body()
+        if (response.isSuccessful) {
+            //getMessages(groupId)
+            val message = response.body()
+            println(message)
+            if (message != null) {
+                _messages.postValue(_messages.value?.plus(message) ?: listOf(message))
+            }
+            return message
         } else {
-            null
+            return null
         }
     }
 }

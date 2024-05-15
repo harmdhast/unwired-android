@@ -19,17 +19,19 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
@@ -41,11 +43,13 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -81,6 +85,8 @@ fun GroupMessages(groupId: Int) {
     }.observeAsState()
     var newMsg by remember { mutableStateOf("") }
     var newMsgError by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+
 
     LaunchedEffect(Unit) {
         groupViewModel.getCurrentUser()
@@ -92,19 +98,22 @@ fun GroupMessages(groupId: Int) {
 
     fun sendMessage() {
         if (newMsg.isBlank()) {
-            newMsgError = true;
+            newMsgError = true
             return
         }
 
-        newMsgError = false;
+        newMsgError = false
         val message = runBlocking { groupViewModel.sendMessage(groupId, newMsg) }
 
         if (message == null) {
-            newMsgError = true;
+            newMsgError = true
             return
         }
 
-        groupViewModel.getMessages(groupId)
+        newMsg = ""
+        focusManager.clearFocus()
+
+        //groupViewModel.getMessages(groupId)
 
     }
 
@@ -134,27 +143,45 @@ fun GroupMessages(groupId: Int) {
         }
     }
 
-    val activity = LocalContext.current as Activity
-    Column {
-        TopAppBar(
-            title = { groups?.let { group -> Text(text = group.first { it.id == groupId }.name) } },
-            navigationIcon = {
-                IconButton(onClick = { activity.finish() }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "")
-                }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-        )
 
-        Column {
+    val activity = LocalContext.current as Activity
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { groups?.let { group -> Text(text = group.first { it.id == groupId }.name) } },
+                navigationIcon = {
+                    IconButton(onClick = { activity.finish() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            )
+        },
+        bottomBar = {
+            BottomAppBar(containerColor = MaterialTheme.colorScheme.primaryContainer) {
+                TextField(
+                    value = newMsg,
+                    onValueChange = { newMsg = it },
+                    modifier = Modifier.weight(1f),
+                    isError = newMsgError,
+                    keyboardActions = KeyboardActions {
+                        sendMessage()
+                    }
+                )
+                IconButton(onClick = { sendMessage() }) {
+                    Icon(Icons.AutoMirrored.Filled.Send, "")
+                }
+            }
+        }) { padding ->
             messages?.let {
                 LazyColumn(
                     state = listState, modifier = Modifier
-                        .weight(1f), reverseLayout = true
+                        .padding(padding)
+                        .fillMaxHeight(), reverseLayout = true
                 ) {
-                    var prevMessage: Message? = null
-                    items(it, key = { it.id }) { message ->
-                        println("Render")
+
+                    itemsIndexed(it) { index, message ->
+                        val prevMessage: Message? = it.elementAtOrNull(index - 1)
                         val isAuthor = message.author.id == currentUser?.id
 
                         val sameAuthor = prevMessage?.author?.id == message.author.id
@@ -167,9 +194,11 @@ fun GroupMessages(groupId: Int) {
                         Row(modifier = Modifier.fillMaxWidth()) {
 
                             Column(
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier
                                     .fillMaxHeight()
-                                    .padding(start = 4.dp, end = 4.dp)
+                                    .padding(4.dp)
                             ) {
                                 if (!sameAuthor) {
                                     AvatarOrDefault(
@@ -177,7 +206,6 @@ fun GroupMessages(groupId: Int) {
                                         size = 48
                                     )
                                 } else {
-
                                     Spacer(modifier = Modifier.width(48.dp))
                                 }
 
@@ -201,28 +229,10 @@ fun GroupMessages(groupId: Int) {
                             }
 
                         }
-
-                        prevMessage = message
                     }
                 }
-            }
 
-            Row(
-                Modifier.padding(8.dp)
-            ) {
-                TextField(
-                    value = newMsg,
-                    onValueChange = { newMsg = it },
-                    modifier = Modifier.weight(1f),
-                    isError = newMsgError,
-                    keyboardActions = KeyboardActions {
-                        sendMessage()
-                    }
-                )
-                IconButton(onClick = { sendMessage() }) {
-                    Icon(Icons.AutoMirrored.Filled.Send, "")
-                }
+
             }
-        }
     }
 }
