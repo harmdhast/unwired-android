@@ -3,10 +3,8 @@ package com.example.unwired_android
 import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -32,7 +30,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,46 +39,24 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.example.unwired_android.api.UserStore
 import com.example.unwired_android.ui.theme.UnwiredandroidTheme
 import com.example.unwired_android.ui.utils.LoaderCircular
 import com.example.unwired_android.viewmodels.LoginViewModel
 import com.example.unwired_android.viewmodels.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
-import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val mainViewModel: MainViewModel by viewModels()
-    private val testViewModel: TestViewModel by viewModels()
-    private val loginViewModel: LoginViewModel by viewModels()
-
-    private val loginActivity =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode == RESULT_OK) {
-                Toast.makeText(this, "Logged In", Toast.LENGTH_SHORT).show()
-                mainViewModel.tokenValid()
-            } else {
-                mainViewModel.tokenValid()
-                println("BACK")
-            }
-        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
 
         setContent {
             UnwiredandroidTheme {
@@ -100,13 +75,6 @@ class MainActivity : ComponentActivity() {
     fun MainContent() {
 
         val isServerUp by mainViewModel.canReachServer.observeAsState()
-
-        // State of bottomBar, set state to false, if current page route is "car_details"
-        val bottomBarState = rememberSaveable { (mutableStateOf(true)) }
-
-// State of topBar, set state to false, if current page route is "car_details"
-        val topBarState = rememberSaveable { (mutableStateOf(true)) }
-
 
         // Error dialog
         val builder: AlertDialog.Builder = AlertDialog.Builder(this)
@@ -183,7 +151,7 @@ class MainActivity : ComponentActivity() {
                             { navController.navigate("register") })
                     }
                     composable("login") {
-                        LoginRoute()
+                        LoginRoute(navController = navController)
                     }
                     composable("register") {
                         RegisterRoute(navController = navController)
@@ -198,7 +166,7 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun LoginRoute() {
+    fun LoginRoute(navController: NavHostController) {
         var username by remember { mutableStateOf("") }
         var password by remember { mutableStateOf("") }
         val focusManager = LocalFocusManager.current
@@ -209,6 +177,7 @@ class MainActivity : ComponentActivity() {
         LaunchedEffect(loginResult) {
             if (loginResult == true) {
                 startActivity(Intent(this@MainActivity, GroupActivity::class.java))
+                navController.navigate("main") // Reset nav route
             }
         }
 
@@ -435,26 +404,4 @@ fun MainRoute(
             )
         }
     }
-}
-
-@HiltViewModel
-class TestViewModel @Inject constructor(
-    private val userStore: UserStore
-) : ViewModel() {
-    private val _isTokenValid = MutableLiveData<Boolean>()
-    val isTokenValid: LiveData<Boolean> = _isTokenValid
-
-
-    fun removeToken() {
-        viewModelScope.launch {
-            try {
-                userStore.deleteToken()
-            } catch (e: Exception) {
-                // Handle error
-                _isTokenValid.postValue(false)
-            }
-        }
-    }
-
-
 }

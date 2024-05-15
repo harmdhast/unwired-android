@@ -32,8 +32,6 @@ class LoginViewModel @Inject constructor(
                 if (success.isSuccessful) {
                     userStore.saveUserAndPassword(username, password)
                     userStore.saveToken(success.body()?.access_token.toString())
-                } else {
-
                 }
                 _loginResult.postValue(success.isSuccessful)
             } catch (e: Exception) {

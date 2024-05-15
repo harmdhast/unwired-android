@@ -102,4 +102,7 @@ interface UnwiredAPI {
     suspend fun groupAdd(
         @Body groupCreateBody: GroupCreateBody
     ): Response<Group>
+
+    @GET("users")
+    suspend fun getUsers(@Query("q") query: String = ""): Response<List<User>>
 }

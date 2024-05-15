@@ -22,30 +22,24 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -63,7 +57,6 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -74,7 +67,11 @@ import com.example.unwired_android.api.Message
 import com.example.unwired_android.api.SendMessageBody
 import com.example.unwired_android.api.UnwiredAPI
 import com.example.unwired_android.api.User
+import com.example.unwired_android.api.UserStore
 import com.example.unwired_android.ui.theme.UnwiredandroidTheme
+import com.example.unwired_android.ui.utils.Base64Avatar
+import com.example.unwired_android.ui.utils.base64ToBitmap
+import com.example.unwired_android.viewmodels.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -112,6 +109,8 @@ fun Group(id: Int, viewModel: GroupViewModel) {
     val listState = rememberLazyListState()
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val activity = LocalContext.current as Activity
+    val mainViewModel: MainViewModel = hiltViewModel()
 
     LaunchedEffect(Unit) {
         viewModel.getCurrentUser()
@@ -125,6 +124,22 @@ fun Group(id: Int, viewModel: GroupViewModel) {
                         painter = painterResource(R.drawable.unwired_white),
                         "Logo"
                     )
+                },
+                actions = {
+                    // Icon button to logout
+                    Icon(
+                        Icons.AutoMirrored.Filled.Logout,
+                        contentDescription = "Logout",
+                        modifier = Modifier
+                            .clickable {
+                                runBlocking {
+                                    viewModel.logout()
+                                }
+                                activity.finish()
+                            }
+                            .padding(8.dp)
+                    )
+
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
             )
@@ -179,7 +194,7 @@ fun Group(id: Int, viewModel: GroupViewModel) {
                     GroupList()
                 }
                 composable("add") {
-                    AddGroup(navController)
+                    GroupAdd(navController)
                 }
                 composable("user") {
                     currentUser?.let { it1 -> UserView(it1) }
@@ -316,96 +331,28 @@ fun UserView(user: User) {
     }
 }
 
-@Composable
-fun AddGroup(navHostController: NavHostController) {
-    var groupName by remember { mutableStateOf("") }
-    var isGroupNameError by remember { mutableStateOf(false) }
-    var groupNameError by remember { mutableStateOf("") }
-    val groupViewModel: GroupViewModel = hiltViewModel()
-    var private by remember {
-        mutableStateOf(false)
-    }
-    val activity = LocalContext.current as Activity
-
-    fun doCreateGroup(name: String) {
-        if (groupName.length < 5) {
-            isGroupNameError = true
-            groupNameError = "Group name length must be at least 6"
-            return
-        }
-
-        val group = runBlocking { groupViewModel.groupAdd(name, true) }
-
-        if (group == null) {
-            isGroupNameError = true
-            groupNameError = "Unknown error while creating group"
-            return
-        }
-
-        println(group)
-        isGroupNameError = false
-        groupNameError = ""
-
-        navHostController.navigate("groups")
-        val intent = Intent(activity, GroupMessagesActivity::class.java)
-        intent.putExtra("groupId", group.id)
-        activity.startActivity(intent)
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .fillMaxHeight()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-
-        TextField(
-            value = "",
-            onValueChange = {},
-            label = { Text("Group Name") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            isError = isGroupNameError,
-            keyboardActions = KeyboardActions {
-                // Handle keyboard action
-            },
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        // Create tabs to switch between private and public groups
-        TabRow(selectedTabIndex = if (private) 0 else 1) {
-            Tab(
-                selected = private,
-                onClick = { private = true },
-                text = { Text("Private") }
-            )
-            Tab(
-                selected = !private,
-                onClick = { private = false },
-                text = { Text("Public") }
-            )
-        }
-
-        // Tab content to select users
-        when (private) {
-            false -> Text("Content for Tab 1")
-            true -> Text("Content for Tab 2")
-        }
-
-        Text(text = groupNameError, color = Color.Red)
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = { doCreateGroup(groupName) }) {
-            Text("CREATE")
-        }
-    }
-}
 
 @HiltViewModel
 class GroupViewModel @Inject constructor(
-    private val unwiredAPI: UnwiredAPI
+    private val unwiredAPI: UnwiredAPI,
+    private val userStore: UserStore
 ) : ViewModel() {
     //private val token = runBlocking { userStore.getAccessToken.first() }
+
+    private val _users = MutableLiveData<List<User>>()
+    val users: LiveData<List<User>> = _users
+    fun getUsers(searchQuery: String = "") {
+        viewModelScope.launch {
+            val resp = unwiredAPI.getUsers(searchQuery)
+            if (resp.isSuccessful) {
+                val usersWithoutCurrentUser =
+                    resp.body()?.filter { it.id != currentUser.value?.id } ?: listOf()
+                _users.postValue(usersWithoutCurrentUser)
+            }
+        }
+    }
+
+
     private val _currentUser = MutableLiveData<User>()
     val currentUser: LiveData<User> = _currentUser
 
@@ -481,9 +428,9 @@ class GroupViewModel @Inject constructor(
     private val _newGroup = MutableLiveData<Group>()
     val newGroup: LiveData<Group> = _newGroup
 
-    suspend fun groupAdd(name: String, private: Boolean): Group? {
+    suspend fun groupAdd(name: String, private: Boolean, members: List<User>): Group? {
         val response =
-            unwiredAPI.groupAdd(GroupCreateBody(name, private, listOf(1)))
+            unwiredAPI.groupAdd(GroupCreateBody(name, private, members.map { it.id }))
         return if (response.isSuccessful) {
             response.body()
         } else {
@@ -509,5 +456,10 @@ class GroupViewModel @Inject constructor(
         } else {
             return null
         }
+    }
+
+    // Logout function
+    suspend fun logout() {
+        userStore.deleteToken()
     }
 }

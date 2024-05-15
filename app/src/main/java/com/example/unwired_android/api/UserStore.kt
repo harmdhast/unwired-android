@@ -49,6 +49,11 @@ class UserStore(private val context: Context) {
     suspend fun deleteToken() {
         context.dataStore.edit { preferences ->
             preferences.remove(TOKEN_KEY)
+            preferences.remove(IV_KEY)
+            preferences.remove(USER_KEY)
+            preferences.remove(USER_IV_KEY)
+            preferences.remove(PASSWORD_KEY)
+            preferences.remove(PASSWORD_IV_KEY)
         }
     }
 

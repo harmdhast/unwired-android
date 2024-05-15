@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -27,25 +29,37 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.Button
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.LastBaseline
 import androidx.compose.ui.platform.LocalConfiguration
@@ -53,11 +67,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.unwired_android.api.Message
 import com.example.unwired_android.ui.theme.UnwiredandroidTheme
+import com.example.unwired_android.ui.utils.base64ToBitmap
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDateTime
 
@@ -81,6 +99,7 @@ fun GroupMessages(groupId: Int) {
     val groupViewModel: GroupViewModel = hiltViewModel()
     val groups by remember { groupViewModel.groups }.observeAsState()
     val messages by remember { groupViewModel.messages }.observeAsState()
+    val members by remember { groupViewModel.members }.observeAsState()
     val avatars by remember { groupViewModel.avatars }.observeAsState()
     val listState = rememberLazyListState()
     val currentUser by remember {
@@ -89,6 +108,9 @@ fun GroupMessages(groupId: Int) {
     var newMsg by remember { mutableStateOf("") }
     var newMsgError by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+    var showAddMemberDialog by remember { mutableStateOf(false) }
 
 
     LaunchedEffect(Unit) {
@@ -98,6 +120,9 @@ fun GroupMessages(groupId: Int) {
         groupViewModel.getMembers(groupId)
     }
 
+    LaunchedEffect(showAddMemberDialog) {
+        groupViewModel.getUsers()
+    }
 
     fun sendMessage() {
         if (newMsg.isBlank()) {
@@ -115,9 +140,6 @@ fun GroupMessages(groupId: Int) {
 
         newMsg = ""
         focusManager.clearFocus()
-
-        //groupViewModel.getMessages(groupId)
-
     }
 
     @Composable
@@ -187,8 +209,10 @@ fun GroupMessages(groupId: Int) {
         }
     }
 
-
     val activity = LocalContext.current as Activity
+
+    val group = groups?.first { it.id == groupId }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -196,6 +220,31 @@ fun GroupMessages(groupId: Int) {
                 navigationIcon = {
                     IconButton(onClick = { activity.finish() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "")
+                    }
+                },
+                actions = {
+                    BadgedBox(
+                        badge = {
+                            members?.let { members ->
+                                Badge(
+                                    modifier = Modifier.padding(4.dp),
+                                    contentColor = Color.Black,
+                                    containerColor = Color.White
+                                ) {
+                                    Text(text = members.size.toString())
+                                }
+                            }
+                        }
+                    ) {
+                        IconButton(onClick = {
+                            scope.launch {
+                                drawerState.apply {
+                                    if (isClosed) open() else close()
+                                }
+                            }
+                        }) {
+                            Icon(Icons.Filled.Group, "")
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
@@ -243,6 +292,143 @@ fun GroupMessages(groupId: Int) {
                         }
                     }
 
+                }
+            }
+        }
+
+        ModalNavigationDrawer(
+            modifier = Modifier
+                .fillMaxHeight()
+                .fillMaxWidth()
+                .padding(padding),
+            drawerState = drawerState,
+            drawerContent = {
+                ModalDrawerSheet(
+                    drawerContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.fillMaxWidth(.9f),
+                ) {
+                    // Button to add members
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (group?.private == true) {
+                            Text("This group is private", fontWeight = FontWeight.Bold)
+                        }
+
+                        if (group?.ownerId == currentUser?.id && group?.private == false) {
+
+                            Button(onClick = {
+                                scope.launch {
+                                    drawerState.close()
+                                    showAddMemberDialog = true
+                                }
+                            }) {
+                                Text(
+                                    "Add member",
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(end = 8.dp)
+                                )
+                                Icon(Icons.Filled.PersonAdd, "")
+                            }
+
+                        }
+                    }
+
+                    members?.let { members ->
+                        LazyColumn(
+                            modifier = Modifier.fillMaxHeight(),
+                            content = {
+                                itemsIndexed(members) { index, member ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(8.dp)
+                                    ) {
+                                        AvatarOrDefault(
+                                            member.id,
+                                            size = 48,
+                                            modifier = Modifier.padding(4.dp)
+                                        )
+                                        Text(
+                                            text = member.username,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            modifier = Modifier
+                                                .alignBy(LastBaseline)
+                                                .paddingFrom(
+                                                    LastBaseline,
+                                                    after = 8.dp
+                                                ) // Space to 1st bubble
+                                        )
+                                    }
+                                }
+                            }
+                        )
+                    }
+                }
+            },
+        ) {
+        }
+
+        if (showAddMemberDialog) {
+            Dialog(onDismissRequest = { showAddMemberDialog = false }) {
+                Text("Test")
+
+                val allUsers by groupViewModel.users.observeAsState()
+
+                val nonMembers = allUsers?.filter { user -> !members!!.contains(user) }
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxHeight(.5f)
+                        .fillMaxWidth(.8f)
+                        .background(MaterialTheme.colorScheme.secondaryContainer)
+                        .padding(8.dp)
+                        .clip(MaterialTheme.shapes.medium)
+                )
+                {
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .padding(8.dp)
+                                .fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Add members", fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    nonMembers?.let { nonMembers ->
+                        items(nonMembers) { user ->
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        //groupViewModel.addMember(groupId, user.id)
+                                        showAddMemberDialog = false
+                                    },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                base64ToBitmap(user.avatar)?.let {
+                                    Image(
+                                        bitmap = it,
+                                        contentDescription = "Avatar",
+                                        contentScale = ContentScale.FillBounds,
+                                        modifier = Modifier
+                                            .size(48.dp)
+                                            .clip(CircleShape)
+                                    )
+                                }
+                                Spacer(Modifier.width(8.dp))
+                                Text(user.username)
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+                    }
                 }
             }
         }
