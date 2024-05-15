@@ -27,13 +27,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
@@ -359,31 +360,43 @@ fun AddGroup(navHostController: NavHostController) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("Create group", style = MaterialTheme.typography.titleLarge)
-        Spacer(modifier = Modifier.height(16.dp))
+
         TextField(
-            value = groupName,
-            onValueChange = { groupName = it },
+            value = "",
+            onValueChange = {},
             label = { Text("Group Name") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            isError = isGroupNameError,
             keyboardActions = KeyboardActions {
-                doCreateGroup(groupName)
+                // Handle keyboard action
             },
         )
         Spacer(modifier = Modifier.height(16.dp))
-        Row(
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Checkbox(checked = private, onCheckedChange = { private = it })
-            Text("Private")
+        // Create tabs to switch between private and public groups
+        TabRow(selectedTabIndex = if (private) 0 else 1) {
+            Tab(
+                selected = private,
+                onClick = { private = true },
+                text = { Text("Private") }
+            )
+            Tab(
+                selected = !private,
+                onClick = { private = false },
+                text = { Text("Public") }
+            )
         }
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(groupNameError, color = Color.Red)
+
+        // Tab content to select users
+        when (private) {
+            false -> Text("Content for Tab 1")
+            true -> Text("Content for Tab 2")
+        }
+
+        Text(text = groupNameError, color = Color.Red)
         Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = { doCreateGroup(groupName) }) {
-            Text("Create")
+            Text("CREATE")
         }
     }
 }
@@ -486,7 +499,11 @@ class GroupViewModel @Inject constructor(
             val message = response.body()
             println(message)
             if (message != null) {
-                _messages.postValue(_messages.value?.plus(message) ?: listOf(message))
+                // Push message to the top of the list
+                val currentMessages = _messages.value
+                if (currentMessages != null) {
+                    _messages.postValue(listOf(message) + currentMessages)
+                }
             }
             return message
         } else {

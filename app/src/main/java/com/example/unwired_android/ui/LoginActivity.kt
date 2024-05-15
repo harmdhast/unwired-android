@@ -92,6 +92,10 @@ fun LoginScreen(
             onClick = {
                 // Call ViewModel's login method
                 viewModel.login(username, password)
+
+                // Save Creds securely
+
+
             },
             modifier = Modifier.fillMaxWidth(),
             //enabled = loginResult != true

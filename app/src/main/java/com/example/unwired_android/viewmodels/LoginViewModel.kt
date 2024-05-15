@@ -30,6 +30,7 @@ class LoginViewModel @Inject constructor(
             try {
                 val success = unwiredAPI.login(username, password)
                 if (success.isSuccessful) {
+                    userStore.saveUserAndPassword(username, password)
                     userStore.saveToken(success.body()?.access_token.toString())
                 } else {
 

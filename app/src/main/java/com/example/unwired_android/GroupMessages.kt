@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.paddingFrom
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -43,20 +44,22 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.LastBaseline
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.unwired_android.api.Message
 import com.example.unwired_android.ui.theme.UnwiredandroidTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.LocalDateTime
 
 @AndroidEntryPoint
 class GroupMessagesActivity : ComponentActivity() {
@@ -143,6 +146,47 @@ fun GroupMessages(groupId: Int) {
         }
     }
 
+    @Composable
+    fun AuthorAndMessage(message: Message, isAuthor: Boolean) {
+        Row {
+            Column(Modifier.padding(8.dp)) {
+                AvatarOrDefault(
+                    message.author.id,
+                    size = 48,
+                    //modifier = Modifier.padding(4.dp)
+                )
+            }
+
+            Column {
+                Row(modifier = Modifier.semantics(mergeDescendants = true) {}) {
+                    Text(
+                        text = message.author.username,
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier
+                            .alignBy(LastBaseline)
+                            .paddingFrom(LastBaseline, after = 8.dp) // Space to 1st bubble
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "${
+                            LocalDateTime.parse(message.at).time.hour.toString().padStart(2, '0')
+                        }:${
+                            LocalDateTime.parse(
+                                message.at
+                            ).time.minute.toString().padStart(2, '0')
+                        }",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.alignBy(LastBaseline),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                }
+                MessageBlock(message = message, isAuthor = isAuthor)
+            }
+
+        }
+    }
+
 
     val activity = LocalContext.current as Activity
     Scaffold(
@@ -173,66 +217,56 @@ fun GroupMessages(groupId: Int) {
                 }
             }
         }) { padding ->
-            messages?.let {
-                LazyColumn(
-                    state = listState, modifier = Modifier
-                        .padding(padding)
-                        .fillMaxHeight(), reverseLayout = true
-                ) {
+        messages?.let {
+            LazyColumn(
+                state = listState, modifier = Modifier
+                    .padding(padding)
+                    .fillMaxHeight(), reverseLayout = true
+            ) {
+                item { Spacer(modifier = Modifier.height(8.dp)) }
 
-                    itemsIndexed(it) { index, message ->
-                        val prevMessage: Message? = it.elementAtOrNull(index - 1)
-                        val isAuthor = message.author.id == currentUser?.id
+                itemsIndexed(it) { index, message ->
+                    val isAuthor = message.author.id == currentUser?.id
+                    val prevAuthor = it.getOrNull(index - 1)?.author
+                    val nextAuthor = it.getOrNull(index + 1)?.author
+                    val isFirstMessage = prevAuthor != message.author
+                    val isLastMessage = nextAuthor != message.author
 
-                        val sameAuthor = prevMessage?.author?.id == message.author.id
-                        val color =
-                            if (isAuthor) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-
-                        if (!sameAuthor) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                        }
+                    if (isLastMessage) {
+                        //Spacer(modifier = Modifier.height(6.dp))
+                        AuthorAndMessage(message = message, isAuthor = isAuthor)
+                        Spacer(modifier = Modifier.height(8.dp))
+                    } else {
                         Row(modifier = Modifier.fillMaxWidth()) {
-
-                            Column(
-                                verticalArrangement = Arrangement.Center,
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier
-                                    .fillMaxHeight()
-                                    .padding(4.dp)
-                            ) {
-                                if (!sameAuthor) {
-                                    AvatarOrDefault(
-                                        message.author.id,
-                                        size = 48
-                                    )
-                                } else {
-                                    Spacer(modifier = Modifier.width(48.dp))
-                                }
-
-                            }
-
-                            Column(
-                                verticalArrangement = Arrangement.Center,
-                                modifier = Modifier
-                                    .background(
-                                        color
-                                    )
-                                    .padding(8.dp)
-                                    .heightIn(min = 32.dp)
-                                    .widthIn(max = LocalConfiguration.current.screenWidthDp.dp * .75f)
-
-                            ) {
-                                Text(
-                                    text = message.content,
-                                    color = textColorForBackground(color)
-                                )
-                            }
-
+                            Spacer(modifier = Modifier.width(64.dp))
+                            MessageBlock(message = message, isAuthor = isAuthor)
                         }
                     }
+
                 }
-
-
             }
+        }
+    }
+}
+
+@Composable
+fun MessageBlock(message: Message, isAuthor: Boolean) {
+    val color =
+        if (isAuthor) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+    Column(
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier
+            .background(
+                color
+            )
+            .padding(8.dp)
+            .heightIn(min = 32.dp)
+            .widthIn(max = LocalConfiguration.current.screenWidthDp.dp * .75f)
+
+    ) {
+        Text(
+            text = message.content,
+            color = textColorForBackground(color)
+        )
     }
 }
