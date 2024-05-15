@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.Message
@@ -43,7 +42,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -68,10 +66,9 @@ import com.example.unwired_android.api.SendMessageBody
 import com.example.unwired_android.api.UnwiredAPI
 import com.example.unwired_android.api.User
 import com.example.unwired_android.api.UserStore
+import com.example.unwired_android.app.chat.ChatActivity
 import com.example.unwired_android.ui.theme.UnwiredandroidTheme
 import com.example.unwired_android.ui.utils.Base64Avatar
-import com.example.unwired_android.ui.utils.base64ToBitmap
-import com.example.unwired_android.viewmodels.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -102,15 +99,10 @@ class GroupActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Group(id: Int, viewModel: GroupViewModel) {
-    val messages by remember { viewModel.messages }.observeAsState()
     val currentUser by remember { viewModel.currentUser }.observeAsState()
-    val members by remember { viewModel.members }.observeAsState()
-    val avatars by remember { viewModel.avatars }.observeAsState()
-    val listState = rememberLazyListState()
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val activity = LocalContext.current as Activity
-    val mainViewModel: MainViewModel = hiltViewModel()
 
     LaunchedEffect(Unit) {
         viewModel.getCurrentUser()
@@ -263,7 +255,7 @@ fun GroupListItem(group: Group) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable {
-                val intent = Intent(activity, GroupMessagesActivity::class.java)
+                val intent = Intent(activity, ChatActivity::class.java)
                 intent.putExtra("groupId", group.id)
                 activity.startActivity(intent)
             },
@@ -402,23 +394,11 @@ class GroupViewModel @Inject constructor(
     private val _members = MutableLiveData<List<User>>()
     val members: LiveData<List<User>> = _members
 
-    private val _avatars = MutableLiveData<HashMap<Int, ImageBitmap>>()
-    val avatars: LiveData<HashMap<Int, ImageBitmap>> = _avatars
-
-
     fun getMembers(groupId: Int) {
         viewModelScope.launch {
             try {
                 val success = unwiredAPI.getMembers(groupId)
                 _members.postValue(success.body())
-                val myHashMap: HashMap<Int, ImageBitmap> = HashMap()
-                success.body()?.forEach { user ->
-                    val bitmap = base64ToBitmap(user.avatar)
-                    if (bitmap != null) {
-                        myHashMap[user.id] = bitmap
-                    }
-                }
-                _avatars.postValue(myHashMap)
             } catch (e: Exception) {
                 // Handle error
             }

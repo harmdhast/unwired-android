@@ -27,7 +27,7 @@ fun base64ToBitmap(b64: String): ImageBitmap? {
 
 
 @Composable
-fun Base64Avatar(b64: String?, size: Int = 200): Unit {
+fun Base64Avatar(b64: String?, size: Int = 200, modifier: Modifier = Modifier): Unit {
     if (b64 == null) {
         return Image(
             painter = painterResource(id = R.drawable.avatar),
@@ -36,6 +36,7 @@ fun Base64Avatar(b64: String?, size: Int = 200): Unit {
             modifier = Modifier
                 .size(size.dp)
                 .clip(CircleShape)
+                .then(modifier)
         )
     }
     val decodedImage = base64ToBitmap(b64)

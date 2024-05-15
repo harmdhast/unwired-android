@@ -39,7 +39,7 @@
         </activity>
 
         <activity
-            android:name=".GroupMessagesActivity"
+            android:name=".app.chat.ChatActivity"
             android:exported="true"
             android:theme="@style/Theme.Unwiredandroid">
             <intent-filter>

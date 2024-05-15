@@ -1,12 +1,6 @@
-package com.example.unwired_android
+package com.example.unwired_android.app.chat
 
 import android.app.Activity
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,17 +8,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.paddingFrom
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -58,49 +47,29 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.LastBaseline
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.unwired_android.GroupViewModel
+import com.example.unwired_android.api.Group
 import com.example.unwired_android.api.Message
-import com.example.unwired_android.ui.theme.UnwiredandroidTheme
-import com.example.unwired_android.ui.utils.base64ToBitmap
-import dagger.hilt.android.AndroidEntryPoint
+import com.example.unwired_android.ui.utils.Base64Avatar
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDateTime
 
-@AndroidEntryPoint
-class GroupMessagesActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        val groupId = intent.getIntExtra("groupId", 0)
-        setContent {
-            UnwiredandroidTheme {
-                GroupMessages(groupId)
-            }
-        }
-    }
-}
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GroupMessages(groupId: Int) {
+fun Chat(group: Group) {
     val groupViewModel: GroupViewModel = hiltViewModel()
-    val groups by remember { groupViewModel.groups }.observeAsState()
     val messages by remember { groupViewModel.messages }.observeAsState()
     val members by remember { groupViewModel.members }.observeAsState()
-    val avatars by remember { groupViewModel.avatars }.observeAsState()
     val listState = rememberLazyListState()
     val currentUser by remember {
         groupViewModel.currentUser
@@ -116,8 +85,8 @@ fun GroupMessages(groupId: Int) {
     LaunchedEffect(Unit) {
         groupViewModel.getCurrentUser()
         groupViewModel.getGroups()
-        groupViewModel.getMessages(groupId)
-        groupViewModel.getMembers(groupId)
+        groupViewModel.getMessages(group.id)
+        groupViewModel.getMembers(group.id)
     }
 
     LaunchedEffect(showAddMemberDialog) {
@@ -131,7 +100,7 @@ fun GroupMessages(groupId: Int) {
         }
 
         newMsgError = false
-        val message = runBlocking { groupViewModel.sendMessage(groupId, newMsg) }
+        val message = runBlocking { groupViewModel.sendMessage(group.id, newMsg) }
 
         if (message == null) {
             newMsgError = true
@@ -143,37 +112,11 @@ fun GroupMessages(groupId: Int) {
     }
 
     @Composable
-    fun AvatarOrDefault(userId: Int, size: Int = 24, modifier: Modifier = Modifier) {
-        val avatar = avatars?.get(userId)
-        if (avatar != null) {
-            return Image(
-                bitmap = avatar,
-                contentDescription = "Avatar",
-                contentScale = ContentScale.FillBounds,
-                modifier = Modifier
-                    .size(size.dp)
-                    .clip(CircleShape)
-                    .then(modifier)
-            )
-        } else {
-            return Image(
-                painter = painterResource(id = R.drawable.avatar),
-                contentDescription = "Avatar",
-                contentScale = ContentScale.FillBounds,
-                modifier = Modifier
-                    .size(size.dp)
-                    .clip(CircleShape)
-                    .then(modifier)
-            )
-        }
-    }
-
-    @Composable
     fun AuthorAndMessage(message: Message, isAuthor: Boolean) {
         Row {
             Column(Modifier.padding(8.dp)) {
-                AvatarOrDefault(
-                    message.author.id,
+                Base64Avatar(
+                    members?.find { it.id == message.authorId }?.avatar,
                     size = 48,
                     //modifier = Modifier.padding(4.dp)
                 )
@@ -211,12 +154,10 @@ fun GroupMessages(groupId: Int) {
 
     val activity = LocalContext.current as Activity
 
-    val group = groups?.first { it.id == groupId }
-
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { groups?.let { group -> Text(text = group.first { it.id == groupId }.name) } },
+                title = { Text(text = group.name) },
                 navigationIcon = {
                     IconButton(onClick = { activity.finish() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "")
@@ -299,13 +240,12 @@ fun GroupMessages(groupId: Int) {
         ModalNavigationDrawer(
             modifier = Modifier
                 .fillMaxHeight()
-                .fillMaxWidth()
                 .padding(padding),
             drawerState = drawerState,
+            gesturesEnabled = false,
             drawerContent = {
                 ModalDrawerSheet(
                     drawerContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                    modifier = Modifier.fillMaxWidth(.9f),
                 ) {
                     // Button to add members
                     Row(
@@ -315,11 +255,11 @@ fun GroupMessages(groupId: Int) {
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (group?.private == true) {
+                        if (group.private) {
                             Text("This group is private", fontWeight = FontWeight.Bold)
                         }
 
-                        if (group?.ownerId == currentUser?.id && group?.private == false) {
+                        if (group.ownerId == currentUser?.id && !group.private) {
 
                             Button(onClick = {
                                 scope.launch {
@@ -348,8 +288,8 @@ fun GroupMessages(groupId: Int) {
                                             .fillMaxWidth()
                                             .padding(8.dp)
                                     ) {
-                                        AvatarOrDefault(
-                                            member.id,
+                                        Base64Avatar(
+                                            member.avatar,
                                             size = 48,
                                             modifier = Modifier.padding(4.dp)
                                         )
@@ -374,85 +314,20 @@ fun GroupMessages(groupId: Int) {
         }
 
         if (showAddMemberDialog) {
-            Dialog(onDismissRequest = { showAddMemberDialog = false }) {
-                Text("Test")
+            val allUsers by groupViewModel.users.observeAsState()
+            val nonMembers = allUsers?.filter { user -> !members!!.contains(user) }
 
-                val allUsers by groupViewModel.users.observeAsState()
-
-                val nonMembers = allUsers?.filter { user -> !members!!.contains(user) }
-
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxHeight(.5f)
-                        .fillMaxWidth(.8f)
-                        .background(MaterialTheme.colorScheme.secondaryContainer)
-                        .padding(8.dp)
-                        .clip(MaterialTheme.shapes.medium)
-                )
-                {
-                    item {
-                        Row(
-                            modifier = Modifier
-                                .padding(8.dp)
-                                .fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Add members", fontWeight = FontWeight.Bold)
-                        }
-                    }
-
-                    nonMembers?.let { nonMembers ->
-                        items(nonMembers) { user ->
-                            Row(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        //groupViewModel.addMember(groupId, user.id)
-                                        showAddMemberDialog = false
-                                    },
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                base64ToBitmap(user.avatar)?.let {
-                                    Image(
-                                        bitmap = it,
-                                        contentDescription = "Avatar",
-                                        contentScale = ContentScale.FillBounds,
-                                        modifier = Modifier
-                                            .size(48.dp)
-                                            .clip(CircleShape)
-                                    )
-                                }
-                                Spacer(Modifier.width(8.dp))
-                                Text(user.username)
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                        }
+            DialogAddMember(
+                nonMembers = nonMembers!!,
+                onDismissRequest = { showAddMemberDialog = false },
+                onAddMember = { user ->
+                    scope.launch {
+                        //groupViewModel.addMember(group.id, user.id)
+                        // groupViewModel.getMembers(group.id)
                     }
                 }
-            }
+            )
         }
     }
 }
 
-@Composable
-fun MessageBlock(message: Message, isAuthor: Boolean) {
-    val color =
-        if (isAuthor) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-    Column(
-        verticalArrangement = Arrangement.Center,
-        modifier = Modifier
-            .background(
-                color
-            )
-            .padding(8.dp)
-            .heightIn(min = 32.dp)
-            .widthIn(max = LocalConfiguration.current.screenWidthDp.dp * .75f)
-
-    ) {
-        Text(
-            text = message.content,
-            color = textColorForBackground(color)
-        )
-    }
-}

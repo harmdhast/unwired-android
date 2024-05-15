@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.unwired_android.api.User
+import com.example.unwired_android.app.chat.ChatActivity
 import com.example.unwired_android.ui.utils.base64ToBitmap
 import kotlinx.coroutines.runBlocking
 
@@ -113,7 +114,7 @@ fun GroupAdd(navHostController: NavHostController) {
         groupNameError = ""
 
         navHostController.navigate("groups")
-        val intent = Intent(activity, GroupMessagesActivity::class.java)
+        val intent = Intent(activity, ChatActivity::class.java)
         intent.putExtra("groupId", group.id)
         activity.startActivity(intent)
     }
