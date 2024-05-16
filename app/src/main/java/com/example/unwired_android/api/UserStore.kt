@@ -1,3 +1,20 @@
+/**
+ * This file contains the UserStore class which is responsible for managing user data.
+ *
+ * The UserStore class provides methods for getting and setting user data, such as the user's token, username, and password.
+ * The data is stored in the Android DataStore and is encrypted using the KeystoreHelper class before being stored.
+ * The encrypted data is then Base64 encoded before being stored in the DataStore.
+ * The data is decrypted and Base64 decoded when it is retrieved from the DataStore.
+ *
+ * The UserStore class uses the following keys to store data in the DataStore:
+ * - TOKEN_KEY: The key for the user's token.
+ * - IV_KEY: The key for the initialization vector used to encrypt the token.
+ * - USER_KEY: The key for the username.
+ * - USER_IV_KEY: The key for the initialization vector used to encrypt the username.
+ * - PASSWORD_KEY: The key for the password.
+ * - PASSWORD_IV_KEY: The key for the initialization vector used to encrypt the password.
+ */
+
 package com.example.unwired_android.api
 
 import KeystoreHelper
@@ -19,6 +36,13 @@ class UserStore(private val context: Context) {
         private val PASSWORD_IV_KEY = stringPreferencesKey("password_iv")
     }
 
+    /**
+     * Retrieves the user's token from the DataStore.
+     *
+     * The token is Base64 decoded and then decrypted using the KeystoreHelper class before being returned.
+     *
+     * @return A Flow that emits the user's token, or null if the token is not set.
+     */
     fun getToken(): Flow<String?> {
         return context.dataStore.data.map { preferences ->
             val ivString = preferences[IV_KEY]
@@ -35,6 +59,13 @@ class UserStore(private val context: Context) {
         }
     }
 
+    /**
+     * Retrieves the user's token from the DataStore.
+     *
+     * The token is Base64 decoded and then decrypted using the KeystoreHelper class before being returned.
+     *
+     * @return A Flow that emits the user's token, or null if the token is not set.
+     */
     suspend fun saveToken(token: String) {
         val (iv, encryptedToken) = KeystoreHelper.encryptData(token)
         val ivString = Base64.encodeToString(iv, Base64.DEFAULT)
@@ -46,6 +77,9 @@ class UserStore(private val context: Context) {
         }
     }
 
+    /**
+     * Deletes the user's token, username, and password from the DataStore.
+     */
     suspend fun deleteToken() {
         context.dataStore.edit { preferences ->
             preferences.remove(TOKEN_KEY)
@@ -57,6 +91,14 @@ class UserStore(private val context: Context) {
         }
     }
 
+    /**
+     * Stores the user's username and password in the DataStore.
+     *
+     * The username and password are encrypted using the KeystoreHelper class and then Base64 encoded before being stored.
+     *
+     * @param user The user's username.
+     * @param password The user's password.
+     */
     suspend fun saveUserAndPassword(user: String, password: String) {
         val (ivUser, encryptedUser) = KeystoreHelper.encryptData(user)
         val ivUserString = Base64.encodeToString(ivUser, Base64.DEFAULT)
@@ -74,6 +116,13 @@ class UserStore(private val context: Context) {
         }
     }
 
+    /**
+     * Retrieves the user's username and password from the DataStore.
+     *
+     * The username and password are Base64 decoded and then decrypted using the KeystoreHelper class before being returned.
+     *
+     * @return A Flow that emits a Pair containing the user's username and password, or null if they are not set.
+     */
     fun getUserAndPassword(): Flow<Pair<String?, String?>> {
         return context.dataStore.data.map { preferences ->
             val ivUserString = preferences[USER_IV_KEY]

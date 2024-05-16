@@ -17,14 +17,25 @@ class LoginViewModel @Inject constructor(
     private val unwiredAPI: UnwiredAPI,
     private val userStore: UserStore
 ) : ViewModel() {
+    // LiveData objects for observing the results of the login and registration operations.
     private val _loginResult = MutableLiveData<Boolean>()
     val loginResult: LiveData<Boolean> = _loginResult
     private val _registerResult = MutableLiveData<Boolean>()
     val registerResult: LiveData<Boolean> = _registerResult
 
+    // LiveData object for observing the error message of the registration operation.
     private val _registerErr = MutableLiveData<String>()
     val registerErr: LiveData<String> = _registerErr
 
+    /**
+     * Performs the login operation.
+     *
+     * This method takes a username and a password as arguments, makes an API call to login with the given username and password,
+     * and updates the loginResult LiveData object with the result of the operation.
+     *
+     * @param username The username to login with.
+     * @param password The password to login with.
+     */
     fun login(username: String, password: String) {
         viewModelScope.launch {
             try {
@@ -41,6 +52,15 @@ class LoginViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Performs the registration operation.
+     *
+     * This method takes a username and a password as arguments, makes an API call to register with the given username and password,
+     * and updates the registerResult and registerErr LiveData objects with the result of the operation.
+     *
+     * @param username The username to register with.
+     * @param password The password to register with.
+     */
     fun register(username: String, password: String) {
         viewModelScope.launch {
             try {

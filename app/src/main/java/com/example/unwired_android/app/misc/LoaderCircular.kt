@@ -1,4 +1,4 @@
-package com.example.unwired_android.ui.utils
+package com.example.unwired_android.app.misc
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -10,6 +10,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
+/**
+ * This function displays a circular progress indicator.
+ */
 @Composable
 fun LoaderCircular() {
     Column(

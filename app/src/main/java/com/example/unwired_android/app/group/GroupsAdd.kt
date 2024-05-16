@@ -1,4 +1,4 @@
-package com.example.unwired_android
+package com.example.unwired_android.app.group
 
 import android.app.Activity
 import android.content.Intent
@@ -46,11 +46,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.unwired_android.api.User
 import com.example.unwired_android.app.chat.ChatActivity
-import com.example.unwired_android.ui.utils.base64ToBitmap
+import com.example.unwired_android.app.misc.base64ToBitmap
+import com.example.unwired_android.viewmodels.GroupViewModel
 import kotlinx.coroutines.runBlocking
 
 @Composable
-fun GroupAdd(navHostController: NavHostController) {
+fun GroupsAdd(navHostController: NavHostController) {
     var groupName by remember { mutableStateOf("") }
     var isGroupNameError by remember { mutableStateOf(false) }
     var groupNameError by remember { mutableStateOf("") }
@@ -226,11 +227,11 @@ fun GroupAdd(navHostController: NavHostController) {
                                         contentDescription = "Avatar",
                                         contentScale = ContentScale.FillBounds,
                                         modifier = Modifier
-                                            .size(48.dp)
+                                            .size(36.dp)
                                             .clip(CircleShape)
                                     )
                                 }
-                                Text(user.username)
+                                Text(user.username, modifier = Modifier.padding(8.dp))
                             }
                         }
                     }

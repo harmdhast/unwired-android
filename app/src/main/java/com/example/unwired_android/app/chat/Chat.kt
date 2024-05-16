@@ -1,17 +1,38 @@
+/**
+ * This file contains the Chat composable function which is responsible for displaying the chat interface.
+ *
+ * The Chat function takes a Group object as an argument and displays a chat interface for that group.
+ * It uses the GroupViewModel to get the current user, the messages for the group, and the members of the group.
+ * It also provides a text field for the user to enter new messages and a button to send the messages.
+ *
+ * The Chat function uses a Scaffold to provide a top bar and a bottom bar.
+ * The top bar displays the name of the group and a back button.
+ * The bottom bar contains the text field for entering new messages and the send button.
+ *
+ * The Chat function also uses a ModalNavigationDrawer to display a list of the members of the group.
+ * The drawer can be opened by clicking on the group icon in the top bar.
+ * If the current user is the owner of the group and the group is not private, the drawer also provides a button to add new members to the group.
+ *
+ * The Chat function uses a LazyColumn to display the messages in the chat.
+ * Each message is displayed as a MessageBlock, and if the message is the last message from the same author, it is displayed with the author's name and avatar.
+ *
+ * The Chat function also provides a dialog for adding new members to the group.
+ * The dialog displays a list of users who are not already members of the group, and provides a button to add a user to the group.
+ */
+
 package com.example.unwired_android.app.chat
 
 import android.app.Activity
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.paddingFrom
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
@@ -48,20 +69,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.LastBaseline
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.unwired_android.GroupViewModel
 import com.example.unwired_android.api.Group
-import com.example.unwired_android.api.Message
-import com.example.unwired_android.ui.utils.Base64Avatar
+import com.example.unwired_android.app.misc.Base64Avatar
+import com.example.unwired_android.viewmodels.GroupViewModel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.datetime.LocalDateTime
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -80,7 +97,7 @@ fun Chat(group: Group) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var showAddMemberDialog by remember { mutableStateOf(false) }
-
+    val activity = LocalContext.current as Activity
 
     LaunchedEffect(Unit) {
         groupViewModel.getCurrentUser()
@@ -110,49 +127,6 @@ fun Chat(group: Group) {
         newMsg = ""
         focusManager.clearFocus()
     }
-
-    @Composable
-    fun AuthorAndMessage(message: Message, isAuthor: Boolean) {
-        Row {
-            Column(Modifier.padding(8.dp)) {
-                Base64Avatar(
-                    members?.find { it.id == message.authorId }?.avatar,
-                    size = 48,
-                    //modifier = Modifier.padding(4.dp)
-                )
-            }
-
-            Column {
-                Row(modifier = Modifier.semantics(mergeDescendants = true) {}) {
-                    Text(
-                        text = message.author.username,
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier
-                            .alignBy(LastBaseline)
-                            .paddingFrom(LastBaseline, after = 8.dp) // Space to 1st bubble
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "${
-                            LocalDateTime.parse(message.at).time.hour.toString().padStart(2, '0')
-                        }:${
-                            LocalDateTime.parse(
-                                message.at
-                            ).time.minute.toString().padStart(2, '0')
-                        }",
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.alignBy(LastBaseline),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                }
-                MessageBlock(message = message, isAuthor = isAuthor)
-            }
-
-        }
-    }
-
-    val activity = LocalContext.current as Activity
 
     Scaffold(
         topBar = {
@@ -207,45 +181,16 @@ fun Chat(group: Group) {
                 }
             }
         }) { padding ->
-        messages?.let {
-            LazyColumn(
-                state = listState, modifier = Modifier
-                    .padding(padding)
-                    .fillMaxHeight(), reverseLayout = true
-            ) {
-                item { Spacer(modifier = Modifier.height(8.dp)) }
 
-                itemsIndexed(it) { index, message ->
-                    val isAuthor = message.author.id == currentUser?.id
-                    val prevAuthor = it.getOrNull(index - 1)?.author
-                    val nextAuthor = it.getOrNull(index + 1)?.author
-                    val isFirstMessage = prevAuthor != message.author
-                    val isLastMessage = nextAuthor != message.author
-
-                    if (isLastMessage) {
-                        //Spacer(modifier = Modifier.height(6.dp))
-                        AuthorAndMessage(message = message, isAuthor = isAuthor)
-                        Spacer(modifier = Modifier.height(8.dp))
-                    } else {
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            Spacer(modifier = Modifier.width(64.dp))
-                            MessageBlock(message = message, isAuthor = isAuthor)
-                        }
-                    }
-
-                }
-            }
-        }
 
         ModalNavigationDrawer(
             modifier = Modifier
-                .fillMaxHeight()
-                .padding(padding),
+                .fillMaxHeight(),
             drawerState = drawerState,
-            gesturesEnabled = false,
             drawerContent = {
                 ModalDrawerSheet(
                     drawerContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.padding(padding)
                 ) {
                     // Button to add members
                     Row(
@@ -260,7 +205,6 @@ fun Chat(group: Group) {
                         }
 
                         if (group.ownerId == currentUser?.id && !group.private) {
-
                             Button(onClick = {
                                 scope.launch {
                                     drawerState.close()
@@ -277,16 +221,17 @@ fun Chat(group: Group) {
 
                         }
                     }
-
+                    // Current members
                     members?.let { members ->
                         LazyColumn(
                             modifier = Modifier.fillMaxHeight(),
                             content = {
-                                itemsIndexed(members) { index, member ->
+                                items(members) { member ->
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(8.dp)
+                                            .padding(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Base64Avatar(
                                             member.avatar,
@@ -297,11 +242,7 @@ fun Chat(group: Group) {
                                             text = member.username,
                                             style = MaterialTheme.typography.titleMedium,
                                             modifier = Modifier
-                                                .alignBy(LastBaseline)
-                                                .paddingFrom(
-                                                    LastBaseline,
-                                                    after = 8.dp
-                                                ) // Space to 1st bubble
+                                                .padding(8.dp)
                                         )
                                     }
                                 }
@@ -311,8 +252,44 @@ fun Chat(group: Group) {
                 }
             },
         ) {
+            // Messages
+            messages?.let {
+                LazyColumn(
+                    state = listState, modifier = Modifier
+                        .padding(padding)
+                        .fillMaxHeight(), reverseLayout = true
+                ) {
+                    item { Spacer(modifier = Modifier.height(8.dp)) }
+
+                    itemsIndexed(it) { index, message ->
+                        val isAuthor = message.author.id == currentUser?.id
+                        // val prevAuthor = it.getOrNull(index - 1)?.author
+                        val nextAuthor = it.getOrNull(index + 1)?.author
+                        // val isFirstMessage = prevAuthor != message.author
+                        val isLastMessage = nextAuthor != message.author
+
+                        if (isLastMessage) {
+
+                            AuthorAndMessage(
+                                message = message,
+                                isAuthor = isAuthor,
+                                user = group.members.find { it.id == message.author.id }
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+                        } else {
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                Spacer(modifier = Modifier.width(64.dp))
+                                MessageBlock(message = message, isAuthor = isAuthor)
+                            }
+                        }
+
+                    }
+                }
+            }
         }
 
+        // Add member dialog
         if (showAddMemberDialog) {
             val allUsers by groupViewModel.users.observeAsState()
             val nonMembers = allUsers?.filter { user -> !members!!.contains(user) }
@@ -322,8 +299,9 @@ fun Chat(group: Group) {
                 onDismissRequest = { showAddMemberDialog = false },
                 onAddMember = { user ->
                     scope.launch {
-                        //groupViewModel.addMember(group.id, user.id)
-                        // groupViewModel.getMembers(group.id)
+                        runBlocking { groupViewModel.addMember(group.id, user.id) }
+                        groupViewModel.getMembers(group.id)
+                        showAddMemberDialog = false
                     }
                 }
             )

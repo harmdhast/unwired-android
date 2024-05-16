@@ -44,8 +44,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.unwired_android.api.API_IP
+import com.example.unwired_android.api.API_PORT
+import com.example.unwired_android.app.group.GroupsActivity
+import com.example.unwired_android.app.misc.LoaderCircular
 import com.example.unwired_android.ui.theme.UnwiredandroidTheme
-import com.example.unwired_android.ui.utils.LoaderCircular
 import com.example.unwired_android.viewmodels.LoginViewModel
 import com.example.unwired_android.viewmodels.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -135,7 +138,7 @@ class MainActivity : ComponentActivity() {
 
         when (tokenValid) {
             true -> {
-                startActivity(Intent(this@MainActivity, GroupActivity::class.java))
+                startActivity(Intent(this@MainActivity, GroupsActivity::class.java))
             }
 
             false -> {
@@ -176,7 +179,7 @@ class MainActivity : ComponentActivity() {
 
         LaunchedEffect(loginResult) {
             if (loginResult == true) {
-                startActivity(Intent(this@MainActivity, GroupActivity::class.java))
+                startActivity(Intent(this@MainActivity, GroupsActivity::class.java))
                 navController.navigate("main") // Reset nav route
             }
         }

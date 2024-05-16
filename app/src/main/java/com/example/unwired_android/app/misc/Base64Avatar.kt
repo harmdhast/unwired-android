@@ -1,4 +1,4 @@
-package com.example.unwired_android.ui.utils
+package com.example.unwired_android.app.misc
 
 import android.graphics.BitmapFactory
 import android.util.Base64
@@ -15,6 +15,17 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.unwired_android.R
 
+/**
+ * This function converts a base64 string to an ImageBitmap.
+ * It uses the Android Base64 class to decode the base64 string into a byte array.
+ * Then it uses the BitmapFactory to decode the byte array into a Bitmap.
+ * Finally, it converts the Bitmap to an ImageBitmap.
+ *
+ * If the base64 string cannot be decoded into an ImageBitmap, it prints an error message and returns null.
+ *
+ * @param b64 The base64 string to be converted to an ImageBitmap.
+ * @return The ImageBitmap created from the base64 string, or null if the base64 string cannot be decoded.
+ */
 fun base64ToBitmap(b64: String): ImageBitmap? {
     return try {
         val imageBytes = Base64.decode(b64, Base64.DEFAULT)
@@ -25,7 +36,9 @@ fun base64ToBitmap(b64: String): ImageBitmap? {
     }
 }
 
-
+/**
+ * This function displays an avatar image using a base64 string or a default avatar image if the base64 string is null.
+ */
 @Composable
 fun Base64Avatar(b64: String?, size: Int = 200, modifier: Modifier = Modifier): Unit {
     if (b64 == null) {

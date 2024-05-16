@@ -1,3 +1,16 @@
+/**
+ * This file contains the APIClient class and related classes and functions for managing API calls.
+ *
+ * The APIClient class provides methods for creating instances of the UnwiredAPI interface, which defines the API endpoints.
+ * It also provides methods for creating instances of the OkHttpClient and Retrofit classes, which are used for making the API calls.
+ *
+ * The AuthMiddleware class is an interceptor that adds the Authorization header to every API request.
+ * The ReAuthHandler class handles the case when an API request returns a 401 Unauthorized response.
+ * It attempts to re-authenticate the user and retry the original request with the new token.
+ *
+ * The Context.dataStore property and the API_IP, API_PORT, and baseURL constants are also defined in this file.
+ */
+
 package com.example.unwired_android.api
 
 import android.content.Context
@@ -23,13 +36,13 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_settings")
-val baseURL = "http://10.0.2.2:8000/"
+const val API_IP: String = "10.0.2.2"
+const val API_PORT: Int = 8000
+const val baseURL = "http://$API_IP:$API_PORT/"
 
 @Module
 @InstallIn(SingletonComponent::class)
 class APIClient {
-    private val baseURL = "http://10.0.2.2:8000/"
-
     @Singleton
     @Provides
     fun provideTokenManager(@ApplicationContext context: Context): UserStore = UserStore(context)
@@ -84,6 +97,9 @@ class APIClient {
             .create(UnwiredAPI::class.java)
 }
 
+/**
+ * Interceptor for adding the Authorization header to every API request.
+ */
 class AuthMiddleware @Inject constructor(
     private val tokenManager: UserStore,
 ) : Interceptor {
@@ -97,6 +113,9 @@ class AuthMiddleware @Inject constructor(
     }
 }
 
+/**
+ * Handler for the case when an API request returns a 401 Unauthorized response.
+ */
 class ReAuthHandler @Inject constructor(
     private val userStore: UserStore
 ) {
