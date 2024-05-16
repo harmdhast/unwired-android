@@ -192,7 +192,18 @@ fun GroupsAdd(navHostController: NavHostController) {
                                     onClick = { selectedUser = user }
                                 )
                                 Spacer(Modifier.width(8.dp))
-                                Text(user.username)
+                                // Display user avatar
+                                base64ToBitmap(user.avatar)?.let {
+                                    Image(
+                                        bitmap = it,
+                                        contentDescription = "Avatar",
+                                        contentScale = ContentScale.FillBounds,
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(CircleShape)
+                                    )
+                                }
+                                Text(user.username, modifier = Modifier.padding(8.dp))
                             }
                         }
                     }
