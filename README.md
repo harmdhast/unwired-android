@@ -28,6 +28,8 @@ These instructions will get you a copy of the project up and running on your loc
 
 Default user is `test` and password is `test`
 
+[demo.webm](https://github.com/harmdhast/unwired-android/assets/5670689/80f940c2-ae0c-48b0-9fb7-96e7b277ff99)
+
 ## Not implemented yet
 
 - Push notifications
